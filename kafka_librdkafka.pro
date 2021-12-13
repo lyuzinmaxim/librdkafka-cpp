@@ -19,6 +19,13 @@ INCLUDEPATH += C:/librdkafka-master/src-cpp
 LIBS += -L"C:/librdkafka/librdkafka.redist.1.7.0/build/native/lib/win/x64/win-x64-Release/v120" -llibrdkafkacpp
 LIBS += -L"C:/librdkafka/librdkafka.redist.1.7.0/build/native/lib/win/x64/win-x64-Release/v120" -llibrdkafka
 
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/librdkafka.dll
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/librdkafkacpp
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/libzstd
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/msvcp120
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/msvcr120
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/zlib
+
 #LIBS += -L"C:\librdkafka\librdkafka.redist.1.7.0\runtimes\win-x64\native" -llibrdkafka
 #LIBS += -L"C:\librdkafka\librdkafka.redist.1.7.0\runtimes\win-x64\native" -llibrdkafkacpp
 #LIBS += -L"C:\librdkafka\librdkafka.redist.1.7.0\runtimes\win-x64\native" -llibzstd
