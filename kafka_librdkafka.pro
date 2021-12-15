@@ -13,6 +13,7 @@ SOURCES += \
 
 INCLUDEPATH += C:/librdkafka/librdkafka.redist.1.7.0/build/native/include/librdkafka
 INCLUDEPATH += C:/librdkafka-master/src-cpp
+INCLUDEPATH += C:\Qt\6.2.1\msvc2019_64\include
 
 #INCLUDEPATH += C:/kcat-master/win32
 
@@ -40,4 +41,7 @@ LIBS += -L"C:/librdkafka/librdkafka.redist.1.7.0/build/native/lib/win/x64/win-x6
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+HEADERS += \
+    json.hpp
 

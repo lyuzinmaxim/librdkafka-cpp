@@ -14,6 +14,11 @@
 #include <getopt.h>
 #endif
 #include "rdkafkacpp.h"
+#include "json.hpp"
+
+#include <QtCore>
+
+using json = nlohmann::json;
 
 static volatile sig_atomic_t run = 1;
 static bool exit_eof             = false;
@@ -29,7 +34,7 @@ const char * msg_consume(RdKafka::Message *message, void *opaque) {
   case RdKafka::ERR__TIMED_OUT:
     break;
   case RdKafka::ERR_NO_ERROR:
-    std::cout << "Read msg at offset " << message->offset() << std::endl;
+//    std::cout << "Read msg at offset " << message->offset() << std::endl;
 
     const char * input_msg = static_cast<const char *> (message->payload());
 //    printf("%.*s\n", static_cast<int>(message->len()),
@@ -38,6 +43,34 @@ const char * msg_consume(RdKafka::Message *message, void *opaque) {
     break;
   }
 }
+
+void readJson()
+   {
+      QString val;
+      QFile file;
+      file.setFileName("test.json");
+      file.open(QIODevice::ReadOnly | QIODevice::Text);
+      val = file.readAll();
+      file.close();
+      qWarning() << val;
+      QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
+      QJsonObject sett2 = d.object();
+      QJsonValue value = sett2.value(QString("appName"));
+      qWarning() << value;
+      QJsonObject item = value.toObject();
+      qWarning() << ("QJsonObject of description: ") << item;
+
+      /* in case of string value get value and convert into string*/
+      qWarning() << ("QJsonObject[appName] of description: ") << item["description"];
+      QJsonValue subobj = item["description"];
+      qWarning() << subobj.toString();
+
+      /* in case of array get array and convert into string*/
+      qWarning() << ("QJsonObject[appName] of value: ") << item["imp"];
+      QJsonArray test = item["imp"].toArray();
+      qWarning() << test[1].toString();
+   }
+
 
 int main(int argc, char **argv) {
   std::string brokers = "10.0.111.10:9092";
@@ -56,7 +89,7 @@ int main(int argc, char **argv) {
    */
 
   partition = 0;
-//  start_offset = 10;
+  start_offset = 100;
 
   conf->set("metadata.broker.list", brokers, errstr);
 
@@ -91,14 +124,31 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  /*
-   * Consume messages
-   */
+
   while (run) {
       RdKafka::Message *msg = consumer->consume(topic, partition, 1000);
-      const char *result = msg_consume(msg, NULL);
+      const char *input_json = msg_consume(msg, NULL);
 
-      std::cout << result << "\n";
+//      const char* json_file = R"(
+//            {
+//             ...
+//          )";
+
+//      std::cout<<*input_json<<"\n";
+//      auto json_file = static_cast<const char*>(result);
+
+      json parsed_json = json::parse(input_json);
+
+//      std::cout<<parsed_json["object"]["bbox"] << "\n";
+
+      int bottom_right_x = parsed_json["object"]["bbox"]["bottomrightx"];
+      int bottom_right_y = parsed_json["object"]["bbox"]["bottomrighty"];
+      int top_left_x = parsed_json["object"]["bbox"]["topleftx"];
+      int top_left_y = parsed_json["object"]["bbox"]["toplefty"];
+
+      std::cout<< "top left x:" << top_left_x << "top left y: " << top_left_y << "\n";
+      std::cout<< "bottom right x:" << bottom_right_x << "bottom right y: " << bottom_right_y<< "\n";
+
       delete msg;
       consumer->poll(0);
   }
