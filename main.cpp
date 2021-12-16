@@ -28,21 +28,66 @@ static void sigterm(int sig) {
 }
 
 
-const char * msg_consume(RdKafka::Message *message, void *opaque) {
-  const RdKafka::Headers *headers;
+static int eof_cnt               = 0;
+static int partition_cnt         = 0;
+static int verbosity             = 1;
+static long msg_cnt              = 0;
+static int64_t msg_bytes         = 0;
+
+void msg_consume(RdKafka::Message *message, void *opaque) {
   switch (message->err()) {
   case RdKafka::ERR__TIMED_OUT:
     break;
-  case RdKafka::ERR_NO_ERROR:
-//    std::cout << "Read msg at offset " << message->offset() << std::endl;
 
-    const char * input_msg = static_cast<const char *> (message->payload());
-//    printf("%.*s\n", static_cast<int>(message->len()),
-//           static_cast<const char *>(message->payload()));
-    return input_msg;
+  case RdKafka::ERR_NO_ERROR:
+    /* Real message */
+    msg_cnt++;
+    msg_bytes += message->len();
+    if (verbosity >= 3)
+      std::cerr << "Read msg at offset " << message->offset() << std::endl;
+    RdKafka::MessageTimestamp ts;
+    ts = message->timestamp();
+    if (verbosity >= 2 &&
+        ts.type != RdKafka::MessageTimestamp::MSG_TIMESTAMP_NOT_AVAILABLE) {
+      std::string tsname = "?";
+      if (ts.type == RdKafka::MessageTimestamp::MSG_TIMESTAMP_CREATE_TIME)
+        tsname = "create time";
+      else if (ts.type ==
+               RdKafka::MessageTimestamp::MSG_TIMESTAMP_LOG_APPEND_TIME)
+        tsname = "log append time";
+      std::cout << "Timestamp: " << tsname << " " << ts.timestamp << std::endl;
+    }
+    if (verbosity >= 2 && message->key()) {
+      std::cout << "Key: " << *message->key() << std::endl;
+    }
+    if (verbosity >= 1) {
+      printf("%.*s\n", static_cast<int>(message->len()),
+             static_cast<const char *>(message->payload()));
+    }
     break;
+
+  case RdKafka::ERR__PARTITION_EOF:
+    /* Last message */
+    if (exit_eof && ++eof_cnt == partition_cnt) {
+      std::cerr << "%% EOF reached for all " << partition_cnt << " partition(s)"
+                << std::endl;
+      run = 0;
+    }
+    break;
+
+  case RdKafka::ERR__UNKNOWN_TOPIC:
+  case RdKafka::ERR__UNKNOWN_PARTITION:
+    std::cerr << "Consume failed: " << message->errstr() << std::endl;
+    run = 0;
+    break;
+
+  default:
+    /* Errors */
+    std::cerr << "Consume failed: " << message->errstr() << std::endl;
+    run = 0;
   }
 }
+
 
 void readJson()
    {
@@ -75,7 +120,7 @@ void readJson()
 int main(int argc, char **argv) {
   std::string brokers = "10.0.111.10:9092";
   std::string errstr;
-  std::string topic_str = "modem";
+  std::vector<std::string>  topic = {"modem"};
   std::string mode;
   std::string debug;
   int32_t partition    = RdKafka::Topic::PARTITION_UA;
@@ -84,13 +129,16 @@ int main(int argc, char **argv) {
   RdKafka::Conf *conf  = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
   RdKafka::Conf *tconf = RdKafka::Conf::create(RdKafka::Conf::CONF_TOPIC);
 
+
+
   /*
    * Set parameters manually
    */
 
   partition = 0;
-  start_offset = 100;
+//  start_offset = 100;
 
+  conf->set("group.id","0",errstr);
   conf->set("metadata.broker.list", brokers, errstr);
 
   signal(SIGINT, sigterm);
@@ -98,7 +146,8 @@ int main(int argc, char **argv) {
 
   conf->set("enable.partition.eof", "true", errstr);
 
-  RdKafka::Consumer *consumer = RdKafka::Consumer::create(conf, errstr);
+
+  RdKafka::KafkaConsumer *consumer = RdKafka::KafkaConsumer::create(conf, errstr);
   if (!consumer) {
     std::cerr << "Failed to create consumer: " << errstr << std::endl;
     exit(1);
@@ -106,57 +155,61 @@ int main(int argc, char **argv) {
 
   std::cout << "% Created consumer " << consumer->name() << std::endl;
 
-  RdKafka::Topic *topic =
-      RdKafka::Topic::create(consumer, topic_str, tconf, errstr);
-  if (!topic) {
-    std::cerr << "Failed to create topic: " << errstr << std::endl;
+  RdKafka::ErrorCode err = consumer->subscribe(topic);
+  if (err) {
+    std::cerr << "Failed to subscribe to " << topic.size()
+              << " topics: " << RdKafka::err2str(err) << std::endl;
     exit(1);
   }
 
   /*
    * Start consumer for topic+partition at start offset
    */
-  RdKafka::ErrorCode resp = consumer->start(topic, partition, start_offset);
+//  RdKafka::ErrorCode resp = consumer->start(topic, partition, start_offset);
 
-  if (resp != RdKafka::ERR_NO_ERROR) {
-    std::cerr << "Failed to start consumer: " << RdKafka::err2str(resp)
-              << std::endl;
-    exit(1);
-  }
+//  if (resp != RdKafka::ERR_NO_ERROR) {
+//    std::cerr << "Failed to start consumer: " << RdKafka::err2str(resp)
+//              << std::endl;
+//    exit(1);
+//  }
 
 
   while (run) {
-      RdKafka::Message *msg = consumer->consume(topic, partition, 1000);
-      const char *input_json = msg_consume(msg, NULL);
+      RdKafka::Message *msg = consumer->consume(1000);
+      msg_consume(msg, NULL);
 
 //      const char* json_file = R"(
 //            {
 //             ...
 //          )";
 
-//      std::cout<<*input_json<<"\n";
+
+      std::cout<<typeid(*msg).name()<<std::endl;
+
+      std::cout<<msg<<std::endl;
+//      std::cout << input_json << "\n";
 //      auto json_file = static_cast<const char*>(result);
 
-      json parsed_json = json::parse(input_json);
+//      json parsed_json = json::parse(input_json);
 
 //      std::cout<<parsed_json["object"]["bbox"] << "\n";
 
-      int bottom_right_x = parsed_json["object"]["bbox"]["bottomrightx"];
-      int bottom_right_y = parsed_json["object"]["bbox"]["bottomrighty"];
-      int top_left_x = parsed_json["object"]["bbox"]["topleftx"];
-      int top_left_y = parsed_json["object"]["bbox"]["toplefty"];
+//      int bottom_right_x = parsed_json["object"]["bbox"]["bottomrightx"];
+//      int bottom_right_y = parsed_json["object"]["bbox"]["bottomrighty"];
+//      int top_left_x = parsed_json["object"]["bbox"]["topleftx"];
+//      int top_left_y = parsed_json["object"]["bbox"]["toplefty"];
 
-      std::cout<< "top left x:" << top_left_x << "top left y: " << top_left_y << "\n";
-      std::cout<< "bottom right x:" << bottom_right_x << "bottom right y: " << bottom_right_y<< "\n";
+//      std::cout<< "top left x:" << top_left_x << "top left y: " << top_left_y << "\n";
+//      std::cout<< "bottom right x:" << bottom_right_x << "bottom right y: " << bottom_right_y<< "\n";
 
       delete msg;
       consumer->poll(0);
   }
 
-  consumer->stop(topic, partition);
-  consumer->poll(1000);
+  consumer->close();
+//  consumer->poll(1000);
 
-  delete topic;
+//  delete topic;
   delete consumer;
   delete conf;
   delete tconf;
