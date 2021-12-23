@@ -13,11 +13,19 @@ SOURCES += \
 
 INCLUDEPATH += C:/librdkafka/librdkafka.redist.1.7.0/build/native/include/librdkafka
 INCLUDEPATH += C:/librdkafka-master/src-cpp
+INCLUDEPATH += C:\Qt\6.2.1\msvc2019_64\include
 
 #INCLUDEPATH += C:/kcat-master/win32
 
 LIBS += -L"C:/librdkafka/librdkafka.redist.1.7.0/build/native/lib/win/x64/win-x64-Release/v120" -llibrdkafkacpp
 LIBS += -L"C:/librdkafka/librdkafka.redist.1.7.0/build/native/lib/win/x64/win-x64-Release/v120" -llibrdkafka
+
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/librdkafka.dll
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/librdkafkacpp
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/libzstd
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/msvcp120
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/msvcr120
+#LIBS += C:/librdkafka/librdkafka.redist.1.7.0/runtimes/win-x64/native/zlib
 
 #LIBS += -L"C:\librdkafka\librdkafka.redist.1.7.0\runtimes\win-x64\native" -llibrdkafka
 #LIBS += -L"C:\librdkafka\librdkafka.redist.1.7.0\runtimes\win-x64\native" -llibrdkafkacpp
@@ -33,4 +41,7 @@ LIBS += -L"C:/librdkafka/librdkafka.redist.1.7.0/build/native/lib/win/x64/win-x6
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+HEADERS += \
+    json.hpp
 
